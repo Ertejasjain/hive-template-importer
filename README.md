@@ -55,12 +55,21 @@ Fill in the values from **Project Settings → API**:
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL | yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `anon` `public` key | yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key | optional, see below |
+| `APP_PASSWORD` | you choose it | optional, see *Password* below |
+| `AUTH_SECRET` | `openssl rand -hex 32` | only with `APP_PASSWORD` |
 
 The app reads and writes entirely on the server. If `SUPABASE_SERVICE_ROLE_KEY` is set it is used
 and never reaches the browser; otherwise the anon key is used, which works because the schema ships
 with permissive anon policies.
 
 `.env.local` is gitignored. **No keys are committed to this repository**, and none should be.
+
+#### Password
+
+Set `APP_PASSWORD` and every page sits behind a sign-in screen; leave it unset and the app is open,
+which is the easier way to run it locally. It is one shared password, not user accounts — see
+[NOTES.md](NOTES.md). The session is a signed, httpOnly cookie that lasts a week; the password itself
+never reaches the browser.
 
 ### 4. Start it
 
@@ -139,6 +148,8 @@ Anything else in the file is reported in the import report rather than silently 
 src/lib/parseSpectora.ts   the parser: spreadsheet -> section/item/comment tree + issue list
 src/lib/sanitize.ts        HTML allow-list for comment bodies
 src/lib/db.ts              all Supabase reads and writes
+src/lib/auth.ts            the shared-password session, signed cookie
+src/middleware.ts          puts every route behind the password when one is set
 src/app/actions.ts         server actions the UI calls
 src/app/page.tsx           upload + template list
 src/app/templates/[id]/    template view and editor

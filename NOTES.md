@@ -40,6 +40,13 @@ in one statement from the JS client. If any of them fails, the template row is d
 cascades — so a half-imported template never exists. The failure is still written to `import_runs`,
 so the user sees what happened instead of an empty screen.
 
+**The password gate is a signed cookie, not the password.** The session cookie is
+`<expiry>.<HMAC>`, httpOnly and signed with a server-side secret, so it cannot be forged or
+extended; nothing derived from the password reaches the browser. The check runs in middleware rather
+than in each page, so a route added later is protected by default instead of by remembering to
+protect it. Set no `APP_PASSWORD` and the app is simply open, which is what you want when running it
+locally.
+
 **Duplicating a template makes a real copy.** Every section, item and comment is re-inserted with
 new ids. Editing a copy can never touch the original, which is the point: inspectors want to branch
 a template for a different inspection type, not share one.
@@ -52,9 +59,11 @@ a template for a different inspection type, not share one.
 
 ## What I deliberately did not build
 
-- **Accounts and permissions.** There is no login, so anyone with the URL can edit. The schema has
-  RLS switched on with explicit permissive policies rather than switched off, so adding auth is a
-  matter of tightening those policies to an `owner_id`, not retro-fitting the security model.
+- **Per-user accounts and permissions.** There is one shared password in front of the app, which
+  stops the deployed URL being open to anyone who finds it, but everyone who gets in sees the same
+  templates. There are no users, no roles and no audit trail of who changed what. The schema has RLS
+  switched on with explicit permissive policies rather than switched off, so adding real auth is a
+  matter of tightening those policies to an `owner_id` — not retro-fitting the security model.
 - **Drag-and-drop reordering.** The `position` columns are there and are respected everywhere, so
   the data model supports it; the UI does not yet. Import fidelity mattered more than rearranging.
 - **Photo hosting.** The photo columns are read and the URLs stored, but the images are not copied
@@ -82,6 +91,9 @@ a template for a different inspection type, not share one.
   report, editing a comment's rich text persists as HTML with the plain-text copy regenerated,
   duplicating produces an independent 13/69/392 copy, and deleting a template removes its sections,
   items and comments with it.
+- The password gate: a signed-out request to any page redirects to `/login` and remembers where it
+  was going, a wrong password is rejected, the right one lands on the page originally asked for, and
+  a malformed template id returns 404 rather than a Postgres error.
 
 ## Time spent
 

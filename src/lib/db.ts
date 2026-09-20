@@ -88,6 +88,17 @@ export interface ImportIssueRow {
 /** Supabase rejects very large single requests, so writes go out in batches. */
 const BATCH = 250;
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Postgres raises on a malformed uuid rather than returning nothing, so a
+ * mistyped or stale URL would surface as a crash. Treat anything that is not a
+ * uuid as simply not found.
+ */
+function isId(value: string): boolean {
+  return UUID.test(value);
+}
+
 async function insertMany(
   table: string,
   rows: Record<string, unknown>[],
@@ -248,6 +259,7 @@ export async function listTemplates(): Promise<(TemplateRow & { counts: { sectio
 }
 
 export async function getTemplate(id: string): Promise<TemplateTree | null> {
+  if (!isId(id)) return null;
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('templates')
@@ -272,6 +284,7 @@ export async function getTemplate(id: string): Promise<TemplateTree | null> {
 }
 
 export async function getLatestImportRun(templateId: string): Promise<ImportRunRow | null> {
+  if (!isId(templateId)) return null;
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('import_runs')

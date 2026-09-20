@@ -148,6 +148,7 @@ button.danger {
 }
 
 input[type='text'],
+input[type='password'],
 textarea,
 select {
   font: inherit;
@@ -159,6 +160,7 @@ select {
   background: var(--surface);
 }
 input[type='text']:focus,
+input[type='password']:focus,
 textarea:focus,
 select:focus,
 .rte:focus {
@@ -508,4 +510,20 @@ input[type='text'].inline-input:focus {
   .section-body {
     padding-left: 16px;
   }
+}
+
+/* ---------- password gate ---------- */
+.gate {
+  max-width: 380px;
+  margin: 8vh auto 0;
+}
+.gate h1 {
+  font-size: 20px;
+}
+.gate .card .pad {
+  padding: 22px;
+}
+
+button.ghost.small {
+  font-size: 13px;
 }

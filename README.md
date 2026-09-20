@@ -100,6 +100,13 @@ To check a different file:
 npm run parse:check -- path/to/other-export.xls
 ```
 
+And to see what the importer does with bad input — a text file, a sheet with the wrong headers, rows
+missing their section, unknown values — run:
+
+```bash
+npm run errors:check
+```
+
 ---
 
 ## What the importer expects

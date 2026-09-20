@@ -30,7 +30,11 @@ function normaliseHeader(header: string): string {
     .replace(/[^a-z0-9]/g, '');
 }
 
-const REQUIRED = ['sectionname', 'itemname', 'commentname'] as const;
+const REQUIRED: { key: string; label: string }[] = [
+  { key: 'sectionname', label: 'Section Name' },
+  { key: 'itemname', label: 'Item Name' },
+  { key: 'commentname', label: 'Comment Name' },
+];
 
 const KNOWN_KEYS = new Set([
   'sectionname', 'itemname', 'commentname', 'commenttext', 'commenttype',
@@ -105,10 +109,6 @@ export function parseSpectoraWorkbook(
     blankrows: false,
   });
 
-  if (rows.length < 2) {
-    throw new ImportError('The spreadsheet has a header row but no template rows under it.');
-  }
-
   const issues: ImportIssue[] = [];
 
   if (workbook.SheetNames.length > 1) {
@@ -147,13 +147,17 @@ export function parseSpectoraWorkbook(
     unmapped.push(raw);
   });
 
-  const missing = REQUIRED.filter((key) => col[key] === undefined);
+  const missing = REQUIRED.filter((r) => col[r.key] === undefined);
   if (missing.length) {
     throw new ImportError(
-      `This does not look like a Spectora template export: the columns ${missing
-        .map((m) => `"${m}"`)
-        .join(', ')} are missing. Expected a sheet starting with Section Name, Item Name, Comment Name.`,
+      `This does not look like a template export: the ${missing
+        .map((m) => `"${m.label}"`)
+        .join(', ')} column${missing.length > 1 ? 's are' : ' is'} missing. The sheet should start with Section Name, Item Name and Comment Name.`,
     );
+  }
+
+  if (rows.length < 2) {
+    throw new ImportError('The spreadsheet has a header row but no template rows under it.');
   }
 
   if (unmapped.length) {

@@ -46,7 +46,7 @@ a template for a different inspection type, not share one.
 
 ## What is supported
 
-- `.xls`, `.xlsx`, `.xlsm` and `.csv` exports, up to 8 MB (the sample is 220 KB)
+- `.xls`, `.xlsx`, `.xlsm` and `.csv` exports, up to 8 MB (the sample export is 55 KB)
 - The 42 columns Spectora exports, listed in the README
 - Templates of any size; writes are batched at 250 rows per request
 
@@ -74,8 +74,14 @@ a template for a different inspection type, not share one.
   info, 12 limitations; 21 high-severity, 281 medium; 72 comments with choice lists.
 - Rich text: 198 comments come through with their markup intact, and the plain-text copy of each one
   matches the text content of the HTML.
-- Error paths were exercised by uploading a non-spreadsheet file, a spreadsheet with the wrong
-  headers, and an empty sheet — each produces a specific message rather than a stack trace.
+- `npm run errors:check` runs the importer over deliberately broken files — a text file, a sheet
+  with unrelated headers, a header row with nothing under it, rows missing their section, unknown
+  comment types and answer types, a non-numeric estimate, a duplicate comment name. Each either
+  produces a specific message rather than a stack trace, or imports with the problem listed.
+- End to end against a live Supabase project: the sample file imports to 13/69/392 rows with a clean
+  report, editing a comment's rich text persists as HTML with the plain-text copy regenerated,
+  duplicating produces an independent 13/69/392 copy, and deleting a template removes its sections,
+  items and comments with it.
 
 ## Time spent
 

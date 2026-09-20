@@ -294,7 +294,7 @@ label.field > span {
   padding-left: 22px;
 }
 
-.inline-input {
+input[type='text'].inline-input {
   font: inherit;
   font-weight: inherit;
   border: 1px solid transparent;
@@ -304,11 +304,11 @@ label.field > span {
   width: 100%;
   min-width: 0;
 }
-.inline-input:hover {
+input[type='text'].inline-input:hover {
   border-color: var(--border);
   background: var(--surface);
 }
-.inline-input:focus {
+input[type='text'].inline-input:focus {
   border-color: var(--accent);
   background: var(--surface);
   outline: 2px solid var(--accent-soft);

@@ -16,6 +16,8 @@ items and comments, in the inspector's own order — stores it, and lets you edi
 
 Built with Next.js (App Router) + TypeScript, Supabase (Postgres) and SheetJS, deployed on Vercel.
 
+**Live: https://hive-template-importer-swart.vercel.app**
+
 ---
 
 ## Run it locally

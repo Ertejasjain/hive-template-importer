@@ -87,7 +87,11 @@ export interface CommentPatch {
   recommendation?: string | null;
 }
 
-export async function saveComment(templateId: string, id: string, patch: CommentPatch) {
+export async function saveComment(
+  templateId: string,
+  id: string,
+  patch: CommentPatch,
+): Promise<string | undefined> {
   const update: Record<string, unknown> = {};
 
   if (patch.name !== undefined) update.name = requireText(patch.name, 'The comment name');
@@ -104,10 +108,11 @@ export async function saveComment(templateId: string, id: string, patch: Comment
     update.recommendation = patch.recommendation?.trim() || null;
   }
 
-  if (Object.keys(update).length === 0) return;
+  if (Object.keys(update).length === 0) return undefined;
 
   await updateRow('comments', id, update);
   revalidatePath(`/templates/${templateId}`);
+  return update.body_html as string | undefined;
 }
 
 export async function removeSection(templateId: string, id: string) {

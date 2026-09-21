@@ -20,6 +20,10 @@ import type { CommentRow, ItemRow, SectionRow, TemplateTree } from '@/lib/db';
 
 type Toast = { text: string; bad?: boolean } | null;
 
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
 const TYPE_LABEL: Record<CommentRow['comment_type'], string> = {
   info: 'info',
   limitation: 'limitation',
@@ -40,17 +44,35 @@ export default function TemplateEditor({ template }: { template: TemplateTree })
     setTimeout(() => setToast(null), bad ? 5000 : 1800);
   }
 
-  /** Run a server action, show the outcome, and keep local state in step. */
+  /**
+   * Run a server action and show the outcome. `apply` updates the screen straight
+   * away so the app feels instant; if the server then refuses, the screen is put
+   * back the way it was, so it never shows a change that was not saved.
+   */
   function run(work: () => Promise<void>, ok: string, apply?: () => void) {
+    const before = tree;
     apply?.();
     startTransition(async () => {
       try {
         await work();
         say(ok);
-      } catch (err) {
-        say(err instanceof Error ? err.message : 'Could not save that change.', true);
+      } catch {
+        setTree(before);
+        say('That change could not be saved. Please try again.', true);
       }
     });
+  }
+
+  /** Save a renamed field; only update the tree once the server has it. */
+  async function saveName(work: () => Promise<void>, patch: () => void, ok: string) {
+    try {
+      await work();
+      patch();
+      say(ok);
+    } catch (err) {
+      say('That name could not be saved. Please try again.', true);
+      throw err; // lets InlineText put the old name back
+    }
   }
 
   function patchSections(fn: (sections: SectionRow[]) => SectionRow[]) {
@@ -103,7 +125,7 @@ export default function TemplateEditor({ template }: { template: TemplateTree })
     });
   }
 
-  const allOpen = open.size === tree.sections.length && tree.sections.length > 0;
+  const allOpen = tree.sections.length > 0 && tree.sections.every((s) => open.has(s.id));
 
   return (
     <>
@@ -115,11 +137,13 @@ export default function TemplateEditor({ template }: { template: TemplateTree })
                 ariaLabel="Template name"
                 value={tree.name}
                 style={{ fontSize: 22, fontWeight: 650, letterSpacing: '-0.02em' }}
-                onSave={async (next) => {
-                  setTree((t) => ({ ...t, name: next }));
-                  await renameTemplate(id, next);
-                  say('Template renamed');
-                }}
+                onSave={(next) =>
+                  saveName(
+                    () => renameTemplate(id, next),
+                    () => setTree((t) => ({ ...t, name: next })),
+                    'Template renamed',
+                  )
+                }
               />
               <div className="meta" style={{ paddingLeft: 7 }}>
                 {counts.sections} sections &middot; {counts.items} items &middot; {counts.comments}{' '}
@@ -194,16 +218,19 @@ export default function TemplateEditor({ template }: { template: TemplateTree })
               ariaLabel="Section name"
               value={section.name}
               style={{ fontWeight: 650, fontSize: 16 }}
-              onSave={async (next) => {
-                patchSections((all) =>
-                  all.map((s) => (s.id === section.id ? { ...s, name: next } : s)),
-                );
-                await renameSection(id, section.id, next);
-                say('Section renamed');
-              }}
+              onSave={(next) =>
+                saveName(
+                  () => renameSection(id, section.id, next),
+                  () =>
+                    patchSections((all) =>
+                      all.map((s) => (s.id === section.id ? { ...s, name: next } : s)),
+                    ),
+                  'Section renamed',
+                )
+              }
             />
             <span className="meta small" style={{ whiteSpace: 'nowrap' }}>
-              {section.items.length} items
+              {plural(section.items.length, 'item')}
             </span>
             <button
               className="ghost danger"
@@ -229,6 +256,7 @@ export default function TemplateEditor({ template }: { template: TemplateTree })
                   templateId={id}
                   item={item}
                   onRun={run}
+                  onSaveName={saveName}
                   onPatch={(fn) =>
                     patchSections((all) =>
                       all.map((s) =>
@@ -238,7 +266,13 @@ export default function TemplateEditor({ template }: { template: TemplateTree })
                       ),
                     )
                   }
-                  onDelete={() =>
+                  onDelete={() => {
+                    if (
+                      !confirm(
+                        `Delete the item "${item.name}" and its ${plural(item.comments.length, 'comment')}?`,
+                      )
+                    )
+                      return;
                     run(
                       () => removeItem(id, item.id),
                       'Item deleted',
@@ -250,8 +284,8 @@ export default function TemplateEditor({ template }: { template: TemplateTree })
                               : s,
                           ),
                         ),
-                    )
-                  }
+                    );
+                  }}
                 />
               ))}
 
@@ -303,16 +337,20 @@ export default function TemplateEditor({ template }: { template: TemplateTree })
 
 /* ------------------------------------------------------------------ item */
 
+type SaveName = (work: () => Promise<void>, patch: () => void, ok: string) => Promise<void>;
+
 function ItemBlock({
   templateId,
   item,
   onRun,
+  onSaveName,
   onPatch,
   onDelete,
 }: {
   templateId: string;
   item: ItemRow;
   onRun: (work: () => Promise<void>, ok: string, apply?: () => void) => void;
+  onSaveName: SaveName;
   onPatch: (fn: (item: ItemRow) => ItemRow) => void;
   onDelete: () => void;
 }) {
@@ -323,13 +361,16 @@ function ItemBlock({
           ariaLabel="Item name"
           value={item.name}
           style={{ fontWeight: 600 }}
-          onSave={async (next) => {
-            onPatch((i) => ({ ...i, name: next }));
-            await renameItem(templateId, item.id, next);
-          }}
+          onSave={(next) =>
+            onSaveName(
+              () => renameItem(templateId, item.id, next),
+              () => onPatch((i) => ({ ...i, name: next })),
+              'Item renamed',
+            )
+          }
         />
         <span className="meta small" style={{ whiteSpace: 'nowrap' }}>
-          {item.comments.length}
+          {plural(item.comments.length, 'comment')}
         </span>
         <button className="ghost danger" onClick={onDelete} title="Delete this item">
           Delete
@@ -342,13 +383,15 @@ function ItemBlock({
           templateId={templateId}
           comment={comment}
           onRun={onRun}
+          onSaveName={onSaveName}
           onPatch={(fn) =>
             onPatch((i) => ({
               ...i,
               comments: i.comments.map((c) => (c.id === comment.id ? fn(c) : c)),
             }))
           }
-          onDelete={() =>
+          onDelete={() => {
+            if (!confirm(`Delete the comment "${comment.name}"?`)) return;
             onRun(
               () => removeComment(templateId, comment.id),
               'Comment deleted',
@@ -357,8 +400,8 @@ function ItemBlock({
                   ...i,
                   comments: i.comments.filter((c) => c.id !== comment.id),
                 })),
-            )
-          }
+            );
+          }}
         />
       ))}
 
@@ -415,17 +458,20 @@ function CommentBlock({
   templateId,
   comment,
   onRun,
+  onSaveName,
   onPatch,
   onDelete,
 }: {
   templateId: string;
   comment: CommentRow;
   onRun: (work: () => Promise<void>, ok: string, apply?: () => void) => void;
+  onSaveName: SaveName;
   onPatch: (fn: (c: CommentRow) => CommentRow) => void;
   onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body_html);
+  const [saving, setSaving] = useState(false);
 
   return (
     <div className="comment">
@@ -434,16 +480,21 @@ function CommentBlock({
           ariaLabel="Comment name"
           value={comment.name}
           style={{ fontWeight: 600, fontSize: 14 }}
-          onSave={async (next) => {
-            onPatch((c) => ({ ...c, name: next }));
-            await saveComment(templateId, comment.id, { name: next });
-          }}
+          onSave={(next) =>
+            onSaveName(
+              async () => {
+                await saveComment(templateId, comment.id, { name: next });
+              },
+              () => onPatch((c) => ({ ...c, name: next })),
+              'Comment renamed',
+            )
+          }
         />
         <span className={`tag ${comment.comment_type}`}>{TYPE_LABEL[comment.comment_type]}</span>
         {comment.severity && <span className={`tag ${comment.severity}`}>{comment.severity}</span>}
         {comment.answer_type && <span className="tag plain">{comment.answer_type}</span>}
         <button
-          className="ghost"
+          className="ghost push-right"
           onClick={() => {
             setDraft(comment.body_html);
             setEditing((v) => !v);
@@ -476,7 +527,9 @@ function CommentBlock({
                 onChange={(e) => {
                   const value = e.target.value as CommentRow['comment_type'];
                   onRun(
-                    () => saveComment(templateId, comment.id, { comment_type: value }),
+                    async () => {
+                      await saveComment(templateId, comment.id, { comment_type: value });
+                    },
                     'Type updated',
                     () => onPatch((c) => ({ ...c, comment_type: value })),
                   );
@@ -495,7 +548,9 @@ function CommentBlock({
                 onChange={(e) => {
                   const value = (e.target.value || null) as CommentRow['severity'];
                   onRun(
-                    () => saveComment(templateId, comment.id, { severity: value }),
+                    async () => {
+                      await saveComment(templateId, comment.id, { severity: value });
+                    },
                     'Severity updated',
                     () => onPatch((c) => ({ ...c, severity: value })),
                   );
@@ -512,20 +567,26 @@ function CommentBlock({
           <div className="row">
             <button
               className="primary"
-              onClick={() =>
-                onRun(
-                  () => saveComment(templateId, comment.id, { body_html: draft }),
-                  'Comment saved',
-                  () => {
-                    onPatch((c) => ({ ...c, body_html: draft }));
+              disabled={saving}
+              onClick={() => {
+                setSaving(true);
+                onRun(async () => {
+                  try {
+                    const saved = await saveComment(templateId, comment.id, { body_html: draft });
+                    // Show the sanitised HTML the server stored, not the raw draft.
+                    onPatch((c) => ({ ...c, body_html: saved ?? draft }));
                     setEditing(false);
-                  },
-                )
-              }
+                  } finally {
+                    setSaving(false);
+                  }
+                }, 'Comment saved');
+              }}
             >
-              Save text
+              {saving ? 'Saving…' : 'Save text'}
             </button>
-            <button onClick={() => setEditing(false)}>Cancel</button>
+            <button disabled={saving} onClick={() => setEditing(false)}>
+              Cancel
+            </button>
             {comment.source_row && (
               <span className="meta small">from row {comment.source_row} of the export</span>
             )}

@@ -112,6 +112,7 @@ button,
   color: var(--text);
   padding: 7px 13px;
   cursor: pointer;
+  white-space: nowrap;
   transition: background 0.12s, border-color 0.12s;
 }
 button:hover:not(:disabled),
@@ -276,7 +277,7 @@ label.field > span {
 }
 .comment > header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
 }
 .comment .body {
@@ -503,12 +504,35 @@ input[type='text'].inline-input:focus {
   background: var(--danger);
 }
 
+/* In a wrapped comment header, keep Edit / Delete on the right. */
+.comment > header .push-right {
+  margin-left: auto;
+}
+
 @media (max-width: 680px) {
   .grid2 {
     grid-template-columns: 1fr;
   }
   .section-body {
     padding-left: 16px;
+  }
+  .topbar .sub {
+    display: none;
+  }
+  /* Template list: the name gets the full row, buttons go underneath. */
+  .tpl-row {
+    flex-wrap: wrap;
+  }
+  .tpl-row .grow {
+    flex-basis: 100%;
+  }
+  /* Comment header: name on its own row, tags and buttons below it,
+     instead of the name being squeezed to a couple of letters. */
+  .comment > header {
+    flex-wrap: wrap;
+  }
+  .comment > header input[type='text'].inline-input {
+    flex-basis: 100%;
   }
 }
 

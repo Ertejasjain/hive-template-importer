@@ -1,12 +1,15 @@
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import LoginForm from '@/components/LoginForm';
-import { isLockEnabled } from '@/lib/auth';
+import { SESSION_COOKIE, isLockEnabled, isValidSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export default function LoginPage({ searchParams }: { searchParams: { next?: string } }) {
-  // With no password configured there is nothing to sign in to.
-  if (!isLockEnabled()) redirect('/');
+export default async function LoginPage({ searchParams }: { searchParams: { next?: string } }) {
+  // With no password configured, or already signed in, there is nothing to do here.
+  if (!isLockEnabled() || (await isValidSession(cookies().get(SESSION_COOKIE)?.value))) {
+    redirect('/');
+  }
 
   return (
     <div className="gate">

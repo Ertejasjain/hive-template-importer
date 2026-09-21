@@ -103,8 +103,7 @@ and this write-up.
 
 ## Credits
 
-Built by Tejas Jain. I used Claude (via Claude Code) as a pair-programming assistant throughout —
-for scaffolding, for drafting the parser and UI components, and for review. The export was analysed
-directly and every mapping in the parser was verified against the real file rather than assumed; the
-data-model and scope decisions above are mine. SheetJS handles spreadsheet reading and
-`sanitize-html` handles the HTML allow-list.
+Built by Tejas Jain with Claude Code, which wrote most of the code. The export was analysed column
+by column before any code was written, every mapping in the parser was checked against the real file
+rather than assumed, and the app was tested end to end on the live deployment. SheetJS handles
+spreadsheet reading and `sanitize-html` handles the HTML allow-list.

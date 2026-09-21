@@ -1,20 +1,11 @@
 import Link from 'next/link';
 import UploadForm from '@/components/UploadForm';
 import TemplateActions from '@/components/TemplateActions';
+import LocalTime from '@/components/LocalTime';
 import { listTemplates } from '@/lib/db';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
-
-function when(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export default async function HomePage() {
   if (!isSupabaseConfigured()) {
@@ -70,7 +61,7 @@ export default async function HomePage() {
                 </div>
                 <div className="meta">
                   {t.counts.sections} sections &middot; {t.counts.items} items &middot;{' '}
-                  {t.counts.comments} comments &middot; added {when(t.created_at)}
+                  {t.counts.comments} comments &middot; added <LocalTime iso={t.created_at} />
                 </div>
               </div>
               <TemplateActions id={t.id} name={t.name} />
